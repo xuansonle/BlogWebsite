@@ -9,24 +9,21 @@ class RegistrationForm(FlaskForm):
     password = PasswordField("Password", validators=[DataRequired()])
     confirm_password = PasswordField("Confirm Password", validators=[DataRequired(), EqualTo("password")])
     submit = SubmitField("Sign up")
-    
-    # def validate_field(self, field):
-    #     if True:
-    #         raise ValidationError("Validation Message")
-    
+
+    # User Validation for registration: Throw error if user already exists
+    # Being called with the FlaskForm class. The ValidationError will be sent back to the Form
     def validate_username(self, username):
         user = User.query.filter_by(username=username.data).first()
-        # Throw error if user already exists
         if user:
             raise ValidationError("That username is taken. Please choose another one")
-        
+    # User Validation for registration: Throw error if email already exists
     def validate_email(self, email):
         email = User.query.filter_by(email=email.data).first()
-        # Throw error if email already exists
         if email:
             raise ValidationError("That email is taken. Please choose another one")
     
 class LoginForm(FlaskForm):
+    # user =  StringField("User/Email", validators=[DataRequired()])
     email = StringField("Email", validators=[DataRequired(), Email()])
     password = PasswordField("Password", validators=[DataRequired()])
     remember = BooleanField("Remember me")
