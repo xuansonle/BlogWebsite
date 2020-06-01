@@ -1,9 +1,8 @@
 import os
 import secrets
 from PIL import Image
-from flask import url_for
+from flask import url_for, current_app
 from flask_mail import Message
-from app import app
 import smtplib
 
 EMAIL_ADRESS = os.environ.get("EMAIL_ADRESS")
@@ -15,7 +14,7 @@ def save_picture(upload_picture):
     _, f_ext = os.path.splitext(upload_picture.filename)
     picture_filename = random_hex + f_ext
     picture_path = os.path.join(
-        app.root_path, "static/profile_pics", picture_filename)
+        current_app.root_path, "static/profile_pics", picture_filename)
     #resize then save the picture in our server
     output_size = (256, 256)
     im = Image.open(upload_picture)
@@ -28,7 +27,7 @@ def save_picture(upload_picture):
 def remove_picture(current_picture):
     try:
         picture_path = os.path.join(
-            app.root_path, "static/profile_pics", current_picture)
+            current_app.root_path, "static/profile_pics", current_picture)
         os.remove(picture_path)
     except OSError:
         pass
