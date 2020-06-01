@@ -187,12 +187,12 @@ def send_reset_email(user):
     token = user.get_reset_token()
 
     msg = EmailMessage()    
-    msg["Subject"] = "Subject"
+    msg["Subject"] = "Password reset request"
     msg["From"] = EMAIL_ADRESS
     msg["To"] = user.email
     msg.set_content(
         f"To reset your password, visiting the following link:\n\n"\
-        f"{url_for('reset_request',token=token, _external=True)}\n\n"\
+        f"{url_for('reset_password',token=token, _external=True)}\n\n"\
         f"If you did not make this request then simply ignore this email and no changes will be made")
 
     with smtplib.SMTP_SSL("smtp.gmail.com",465) as smtp:
