@@ -1,19 +1,25 @@
 from app import app, db, bcrypt
-from app.forms import RegistrationForm, LoginForm, UpdateAccountForm, PostForm
+from app.forms import (RegistrationForm, LoginForm, UpdateAccountForm,
+                       PostForm, RequestResetForm, ResetPasswordForm)
 from app.models import User, Post
 from flask import render_template, url_for, flash, redirect, request, abort
 import secrets
 import os
-# User Authentication
-from flask_login import login_user, current_user, logout_user, login_required
+from flask_login import login_user, current_user, logout_user, login_required ## User Authentication
 from PIL import Image
+from flask_mail import Message
+import smtplib
+from email.message import EmailMessage
 
+EMAIL_ADRESS = os.environ.get("EMAIL_ADRESS")
+EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD")
 
 @app.route("/")
 @app.route("/home")
 def home():
-    page = request.args.get("page",1,type=int)
-    posts = Post.query.order_by(Post.date_posted.desc()).paginate(page=page, per_page=5)
+    page = request.args.get("page", 1, type=int)
+    posts = Post.query.order_by(
+        Post.date_posted.desc()).paginate(page=page, per_page=5)
     return render_template("home.html", posts=posts)
 
 
@@ -25,7 +31,7 @@ def about():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if current_user.is_authenticated:  # check if user already logged in -> back to homepage
-        redirect(url_for("home"))
+        return redirect(url_for("home"))
     form = RegistrationForm()
     if form.validate_on_submit():
         hashed_password = bcrypt.generate_password_hash(
@@ -43,7 +49,7 @@ def register():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:  # check if user already logged in -> back to homepage
-        redirect(url_for("home"))
+        return redirect(url_for("home"))
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter((User.email == form.email.data) | (
@@ -149,7 +155,7 @@ def update_post(post_id):
         db.session.commit()
         flash("Your post has been updated!", "success")
         return redirect(url_for("post", post_id=post.id))
-    elif request.method=="GET":
+    elif request.method == "GET":
         form.title.data = post.title
         form.content.data = post.content
     return render_template("create_post.html", title="Update Post", form=form, legend="Update Post")
@@ -169,9 +175,59 @@ def delete_post(post_id):
 
 @app.route("/user/<string:username>")
 def user_posts(username):
-    page = request.args.get("page",1,type=int)
+    page = request.args.get("page", 1, type=int)
     user = User.query.filter_by(username=username).first_or_404()
     posts = Post.query.filter_by(author=user)\
         .order_by(Post.date_posted.desc())\
         .paginate(page=page, per_page=5)
     return render_template("user_posts.html", posts=posts, user=user)
+
+
+def send_reset_email(user):
+    token = user.get_reset_token()
+
+    msg = EmailMessage()    
+    msg["Subject"] = "Subject"
+    msg["From"] = EMAIL_ADRESS
+    msg["To"] = user.email
+    msg.set_content(
+        f"To reset your password, visiting the following link:\n\n"\
+        f"{url_for('reset_request',token=token, _external=True)}\n\n"\
+        f"If you did not make this request then simply ignore this email and no changes will be made")
+
+    with smtplib.SMTP_SSL("smtp.gmail.com",465) as smtp:
+        smtp.login(EMAIL_ADRESS, EMAIL_PASSWORD)
+        smtp.send_message(msg)
+
+@app.route("/reset_password", methods=["GET", "POST"])
+def reset_request():
+    if current_user.is_authenticated:  # check if user already logged in -> back to homepage
+        return redirect(url_for("home"))
+    form = RequestResetForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        send_reset_email(user)
+        flash("An email with instructions to reset your password has been sent.", "info")
+        return redirect(url_for("login"))
+    return render_template("reset_request.html", title="Reset Password", form=form)
+
+
+@app.route("/reset_password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    if current_user.is_authenticated:  # check if user already logged in -> back to homepage
+        return redirect(url_for("home"))
+    user = User.verify_reset_token(token)
+    if user is None:
+        flash("That is an invalid or expired token", "warning")
+        return redirect(url_for("reset_request"))
+    else:
+        form = ResetPasswordForm()
+        if form.validate_on_submit():
+            hashed_password = bcrypt.generate_password_hash(
+                form.password.data).decode("utf-8")
+            user.password = hashed_password
+            db.session.commit()
+            flash(
+                "Your password has been updated! You are now able to log in.", "success")
+            return redirect(url_for("login"))
+        return render_template("reset_password.html", title="Reset Password", form=form)
