@@ -2,7 +2,7 @@
 # SETTINGS
 ####################################################################################
 # APP
-from flask import Flask
+from flask import Flask, render_template
 app = Flask(__name__)
 
 # SECRET_KEY
@@ -192,3 +192,11 @@ i.thumbnail((125,125), Image.ANTIALIAS) #resize it, keep ratio
 i.save("my_path") #save the picture to file system
 
 # Bootstrap Modal for Delete action
+
+# Custom error pages
+@app.app_errorhandler(403)
+def error_404(error):
+    return render_template("template.html"), 403
+# 404: Page not found
+# 403: Permission
+# 500: Something went wrong
