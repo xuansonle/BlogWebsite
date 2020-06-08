@@ -4,8 +4,9 @@ from PIL import Image
 from flask import url_for, current_app
 from flask_mail import Message
 import smtplib
+from email.message import EmailMessage
 
-EMAIL_ADRESS = os.environ.get("EMAIL_ADRESS")
+EMAIL_ADDRESS = os.environ.get("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD")
 
 def save_picture(upload_picture):
@@ -38,7 +39,7 @@ def send_reset_email(user):
 
     msg = EmailMessage()
     msg["Subject"] = "Password reset request"
-    msg["From"] = EMAIL_ADRESS
+    msg["From"] = EMAIL_ADDRESS
     msg["To"] = user.email
     msg.set_content(
         f"To reset your password, visiting the following link:\n\n"
@@ -46,5 +47,5 @@ def send_reset_email(user):
         f"If you did not make this request then simply ignore this email and no changes will be made")
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-        smtp.login(EMAIL_ADRESS, EMAIL_PASSWORD)
+        smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
         smtp.send_message(msg)
